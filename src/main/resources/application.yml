@@ -1,0 +1,61 @@
+server:
+  port: 8080
+  shutdown: graceful
+  # ограничение размера запроса: слишком большое тело не обрабатывается
+  tomcat:
+    max-swallow-size: 1MB
+    max-http-form-post-size: 1MB
+
+spring:
+  application:
+    name: library-api
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/library}
+    username: ${DB_USER:library}
+    password: ${DB_PASSWORD:library}
+    hikari:
+      maximum-pool-size: 5
+      connection-timeout: 3000
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate   # схему создаёт Flyway, Hibernate только сверяет
+    properties:
+      hibernate.jdbc.time_zone: UTC
+  flyway:
+    enabled: true
+  jackson:
+    deserialization:
+      fail-on-unknown-properties: true   # неизвестное поле в JSON → 400
+    default-property-inclusion: non_null
+    serialization:
+      write-dates-as-timestamps: false
+  mvc:
+    problemdetails:
+      enabled: true
+  lifecycle:
+    timeout-per-shutdown-phase: 10s
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: always
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+    operations-sorter: method
+  api-docs:
+    path: /v3/api-docs
+
+logging:
+  pattern:
+    console: "%d{yyyy-MM-dd'T'HH:mm:ss.SSSXXX} %-5level [%X{requestId:-main}] %logger{20} : %msg%n"
+  level:
+    root: INFO
+    ru.lab15: INFO
+    org.hibernate.engine.jdbc.spi.SqlExceptionHelper: "OFF"
