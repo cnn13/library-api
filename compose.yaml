@@ -23,7 +23,7 @@ services:
     build:
       context: .
       target: runtime
-    image: library-api:1.0.0
+    image: library-api:1.1.0
     restart: unless-stopped
     depends_on:
       db:

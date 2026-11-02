@@ -1,0 +1,31 @@
+# helm install prometheus prometheus-community/prometheus -n monitoring -f prometheus-values.yaml
+# Облегчённая установка под Minikube на слабой машине:
+# сервер Prometheus + kube-state-metrics (объекты кластера) + node-exporter (метрики узла).
+alertmanager:
+  enabled: false
+prometheus-pushgateway:
+  enabled: false
+
+server:
+  retention: 2d
+  persistentVolume:
+    enabled: true
+    size: 2Gi
+  resources:
+    requests: {cpu: 100m, memory: 256Mi}
+    limits: {memory: 512Mi}
+  # встроенный конфиг чарта уже содержит job "kubernetes-pods":
+  # он собирает метрики со всех подов с аннотацией prometheus.io/scrape: "true" (наш library-api)
+  global:
+    scrape_interval: 15s
+    evaluation_interval: 15s
+
+kube-state-metrics:
+  resources:
+    requests: {cpu: 10m, memory: 32Mi}
+    limits: {memory: 128Mi}
+
+prometheus-node-exporter:
+  resources:
+    requests: {cpu: 10m, memory: 16Mi}
+    limits: {memory: 64Mi}

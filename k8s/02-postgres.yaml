@@ -1,0 +1,63 @@
+# PostgreSQL: StatefulSet с постоянным томом (PVC) и внутренний Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: library-db
+  namespace: library
+  labels: {app: library-db}
+spec:
+  selector: {app: library-db}
+  ports:
+    - name: postgres
+      port: 5432
+      targetPort: 5432
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: library-db
+  namespace: library
+spec:
+  serviceName: library-db
+  replicas: 1
+  selector:
+    matchLabels: {app: library-db}
+  template:
+    metadata:
+      labels: {app: library-db}
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:17-alpine
+          ports:
+            - containerPort: 5432
+          env:
+            - name: POSTGRES_DB
+              valueFrom: {configMapKeyRef: {name: library-config, key: DB_NAME}}
+            - name: POSTGRES_USER
+              valueFrom: {configMapKeyRef: {name: library-config, key: DB_USER}}
+            - name: POSTGRES_PASSWORD
+              valueFrom: {secretKeyRef: {name: library-db, key: password}}
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+          readinessProbe:
+            exec: {command: ["sh", "-c", "pg_isready -U \"$POSTGRES_USER\" -d \"$POSTGRES_DB\""]}
+            periodSeconds: 5
+          livenessProbe:
+            exec: {command: ["sh", "-c", "pg_isready -U \"$POSTGRES_USER\" -d \"$POSTGRES_DB\""]}
+            initialDelaySeconds: 20
+            periodSeconds: 10
+          resources:
+            requests: {cpu: 50m, memory: 64Mi}
+            limits: {memory: 256Mi}
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources:
+          requests:
+            storage: 1Gi

@@ -1,0 +1,56 @@
+# helm install grafana grafana-community/grafana -n monitoring -f grafana-values.yaml \
+#   --set adminPassword=<пароль> --set-file dashboards.default.library-api.json=library-api-dashboard.json
+resources:
+  requests: {cpu: 50m, memory: 192Mi}
+  limits: {memory: 512Mi}   # с 256Mi Grafana 13 получала OOMKilled
+
+persistence:
+  enabled: false   # дашборды и источник данных создаются из этого файла при каждом старте
+
+grafana.ini:
+  plugins:
+    preinstall_disabled: true   # не докачивать встроенные плагины при старте (экономия памяти и времени)
+  analytics:
+    check_for_updates: false
+    reporting_enabled: false
+
+# Prometheus как источник данных (адрес — DNS-имя сервиса в кластере)
+datasources:
+  datasources.yaml:
+    apiVersion: 1
+    datasources:
+      - name: Prometheus
+        uid: prometheus
+        type: prometheus
+        url: http://prometheus-server.monitoring.svc.cluster.local
+        access: proxy
+        isDefault: true
+
+dashboardProviders:
+  dashboardproviders.yaml:
+    apiVersion: 1
+    providers:
+      - name: default
+        orgId: 1
+        folder: Lab16
+        type: file
+        disableDeletion: false
+        options:
+          path: /var/lib/grafana/dashboards/default
+
+dashboards:
+  default:
+    # готовые дашборды с grafana.com (скачиваются при старте)
+    kubernetes-pods:
+      gnetId: 15760        # Kubernetes / Views / Pods
+      revision: 37
+      datasource: Prometheus
+    jvm-micrometer:
+      gnetId: 4701         # JVM (Micrometer)
+      revision: 10
+      datasource: Prometheus
+    node-exporter:
+      gnetId: 1860         # Node Exporter Full
+      revision: 37
+      datasource: Prometheus
+    # library-api: собственный дашборд, передаётся через --set-file

@@ -8,6 +8,7 @@
 - Ошибки — в формате **RFC 7807** (`application/problem+json`), журнал запросов с `requestId`
 - Документация API — **Swagger UI** (springdoc-openapi)
 - Проверка — **Postman**-коллекция с автотестами (`postman/`)
+- Развёртывание в **Kubernetes** (`k8s/`), мониторинг **Prometheus + Grafana**, **CI/CD** в GitHub Actions
 
 ## Запуск
 
@@ -100,6 +101,31 @@ curl -s -X POST localhost:8080/api/v1/books -H 'Content-Type: application/json' 
 3. **runtime** — `eclipse-temurin:21-jre-alpine`: только JRE и приложение, запуск от непривилегированного пользователя, `HEALTHCHECK`.
 
 `compose.yaml`: сервис `db` (PostgreSQL с healthcheck и томом) и `api`, который стартует только после того, как база стала healthy; общая сеть `backend`, ограничения памяти.
+
+## Kubernetes (лабораторная 16)
+
+Манифесты — в `k8s/`: Namespace `library`, ConfigMap, PostgreSQL (StatefulSet + PVC + Service), API (Deployment из 2 реплик с пробами startup/readiness/liveness + Service NodePort 30080).
+
+```bash
+minikube start
+docker build -t library-api:1.1.0 . && minikube image load library-api:1.1.0
+kubectl apply -f k8s/00-namespace.yaml
+kubectl -n library create secret generic library-db --from-literal=password=<пароль>
+kubectl apply -f k8s/01-config.yaml -f k8s/02-postgres.yaml -f k8s/03-api.yaml
+curl http://$(minikube ip):30080/api/v1/books
+```
+
+Мониторинг (`k8s/monitoring/`): Prometheus (`prometheus-community/prometheus`) и Grafana (`grafana-community/grafana`) с готовыми дашбордами и дашбордом `Library API`. Метрики приложения — `/actuator/prometheus`; Prometheus находит поды по аннотации `prometheus.io/scrape: "true"`.
+
+```bash
+kubectl create namespace monitoring
+helm install prometheus prometheus-community/prometheus -n monitoring -f k8s/monitoring/prometheus-values.yaml
+helm install grafana grafana-community/grafana -n monitoring -f k8s/monitoring/grafana-values.yaml \
+  --set adminPassword=<пароль> --set-file dashboards.default.library-api.json=k8s/monitoring/library-api-dashboard.json
+kubectl -n monitoring port-forward svc/grafana 3000:80
+```
+
+CI/CD (`.github/workflows/ci-cd.yml`): на каждый push — сборка образа с тестами, развёртывание в кластер kind теми же манифестами и smoke-тест через Service.
 
 ## Postman
 

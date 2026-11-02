@@ -13,7 +13,7 @@
 
   <groupId>ru.lab15</groupId>
   <artifactId>library-api</artifactId>
-  <version>1.0.0</version>
+  <version>1.1.0</version>
   <name>library-api</name>
   <description>Library microservice (authors and books) with REST API and PostgreSQL</description>
 
@@ -38,6 +38,11 @@
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-actuator</artifactId>
+    </dependency>
+    <!-- метрики в формате Prometheus: /actuator/prometheus -->
+    <dependency>
+      <groupId>io.micrometer</groupId>
+      <artifactId>micrometer-registry-prometheus</artifactId>
     </dependency>
     <!-- миграции схемы БД -->
     <dependency>

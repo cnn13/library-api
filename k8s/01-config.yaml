@@ -1,0 +1,12 @@
+# Несекретные настройки. Пароль БД — в Secret library-db (создаётся командой, см. README):
+#   kubectl -n library create secret generic library-db --from-literal=password=<пароль>
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: library-config
+  namespace: library
+data:
+  DB_NAME: library
+  DB_USER: library
+  DB_URL: jdbc:postgresql://library-db:5432/library
+  JAVA_OPTS: "-XX:MaxRAMPercentage=75 -XX:+ExitOnOutOfMemoryError"

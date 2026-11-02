@@ -40,10 +40,20 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info
+        include: health,info,prometheus
   endpoint:
     health:
       show-details: always
+      # /actuator/health/liveness и /readiness — для проб Kubernetes
+      probes:
+        enabled: true
+  metrics:
+    tags:
+      application: ${spring.application.name}
+    distribution:
+      # гистограмма времени ответа для перцентилей в Grafana
+      percentiles-histogram:
+        http.server.requests: true
 
 springdoc:
   swagger-ui:

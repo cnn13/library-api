@@ -1,0 +1,53 @@
+# CI/CD: сборка образа (с unit-тестами в multi-stage) → развёртывание в Kubernetes (kind) → smoke-тест
+name: ci-cd
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      # CI: тесты выполняются внутри стадии build Dockerfile — упавший тест останавливает конвейер
+      - name: Build image (runs unit tests)
+        run: docker build -t library-api:1.1.0 .
+
+      # CD: одноузловой кластер Kubernetes прямо в раннере
+      - name: Create kind cluster
+        uses: helm/kind-action@v1
+        with:
+          cluster_name: ci
+
+      - name: Load image into cluster
+        run: kind load docker-image library-api:1.1.0 --name ci
+
+      - name: Deploy manifests
+        run: |
+          kubectl apply -f k8s/00-namespace.yaml
+          kubectl -n library create secret generic library-db --from-literal=password="$(openssl rand -hex 16)"
+          kubectl apply -f k8s/01-config.yaml -f k8s/02-postgres.yaml -f k8s/03-api.yaml
+          kubectl -n library rollout status statefulset/library-db --timeout=5m
+          kubectl -n library rollout status deployment/library-api --timeout=8m
+          kubectl -n library get pods -o wide
+
+      - name: Smoke test through the Service
+        run: |
+          kubectl -n library port-forward svc/library-api 8080:80 >/dev/null 2>&1 &
+          sleep 5
+          curl -sf localhost:8080/actuator/health | grep -q '"status":"UP"'
+          curl -sf localhost:8080/api/v1/books | grep -q '"totalItems":4'
+          test "$(curl -s -o /dev/null -w '%{http_code}' localhost:8080/api/v1/books/999999)" = 404
+          echo "smoke test passed"
+
+      - name: Diagnostics on failure
+        if: failure()
+        run: |
+          kubectl get pods -A
+          kubectl -n library describe pods
+          kubectl -n library logs deploy/library-api --tail=100 || true

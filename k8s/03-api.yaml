@@ -1,0 +1,63 @@
+# Library API: Deployment из 2 реплик и Service типа NodePort
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: library-api
+  namespace: library
+  labels: {app: library-api}
+spec:
+  replicas: 2
+  selector:
+    matchLabels: {app: library-api}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate: {maxUnavailable: 0, maxSurge: 1}
+  template:
+    metadata:
+      labels: {app: library-api}
+      annotations:
+        # по этим аннотациям Prometheus сам находит поды и собирает метрики
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8080"
+        prometheus.io/path: /actuator/prometheus
+    spec:
+      containers:
+        - name: api
+          image: library-api:1.1.0
+          imagePullPolicy: IfNotPresent   # образ загружен в minikube локально
+          ports:
+            - name: http
+              containerPort: 8080
+          envFrom:
+            - configMapRef: {name: library-config}
+          env:
+            - name: DB_PASSWORD
+              valueFrom: {secretKeyRef: {name: library-db, key: password}}
+          startupProbe:
+            httpGet: {path: /actuator/health/liveness, port: http}
+            periodSeconds: 5
+            failureThreshold: 36       # до 3 минут на старт JVM на слабой машине
+          readinessProbe:
+            httpGet: {path: /actuator/health/readiness, port: http}
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: {path: /actuator/health/liveness, port: http}
+            periodSeconds: 20
+          resources:
+            requests: {cpu: 100m, memory: 256Mi}
+            limits: {memory: 384Mi}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: library-api
+  namespace: library
+  labels: {app: library-api}
+spec:
+  type: NodePort
+  selector: {app: library-api}
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+      nodePort: 30080
