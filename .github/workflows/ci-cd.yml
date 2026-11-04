@@ -72,7 +72,7 @@ jobs:
         with:
           context: .
           load: true
-          tags: library-api:1.1.0
+          tags: library-api:1.2.0
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -83,14 +83,15 @@ jobs:
           cluster_name: ci
 
       - name: Load image into cluster
-        run: kind load docker-image library-api:1.1.0 --name ci
+        run: kind load docker-image library-api:1.2.0 --name ci
 
       - name: Deploy manifests
         run: |
           kubectl apply -f k8s/00-namespace.yaml
           kubectl -n library create secret generic library-db --from-literal=password="$(openssl rand -hex 16)"
-          kubectl apply -f k8s/01-config.yaml -f k8s/02-postgres.yaml -f k8s/03-api.yaml
+          kubectl apply -f k8s/01-config.yaml -f k8s/02-postgres.yaml -f k8s/03-api.yaml -f k8s/04-kafka.yaml
           kubectl -n library rollout status statefulset/library-db --timeout=5m
+          kubectl -n library rollout status statefulset/library-kafka --timeout=5m
           kubectl -n library rollout status deployment/library-api --timeout=8m
           kubectl -n library get pods -o wide
 
@@ -101,6 +102,13 @@ jobs:
           curl -sf localhost:8080/actuator/health | grep -q '"status":"UP"'
           curl -sf localhost:8080/api/v1/books | grep -q '"totalItems":4'
           test "$(curl -s -o /dev/null -w '%{http_code}' localhost:8080/api/v1/books/999999)" = 404
+          # выдача книги → событие через outbox и Kafka → статистика, построенная consumer'ом
+          curl -sf -X POST localhost:8080/api/v1/loans -H 'Content-Type: application/json' -d '{"bookId":1,"readerId":1}' | grep -q '"status":"ACTIVE"'
+          for i in $(seq 1 30); do
+            curl -sf localhost:8080/api/v1/stats/books/top | grep -q '"timesIssued":1' && break
+            sleep 2
+          done
+          curl -sf localhost:8080/api/v1/stats/books/top | grep -q '"timesIssued":1'
           echo "smoke test passed"
 
       - name: Diagnostics on failure
@@ -109,3 +117,4 @@ jobs:
           kubectl get pods -A
           kubectl -n library describe pods
           kubectl -n library logs deploy/library-api --tail=100 || true
+          kubectl -n library logs statefulset/library-kafka --tail=50 || true

@@ -30,6 +30,20 @@ spring:
     default-property-inclusion: non_null
     serialization:
       write-dates-as-timestamps: false
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    producer:
+      acks: all                 # запись подтверждена всеми in-sync репликами
+      properties:
+        enable.idempotence: true  # ретраи producer'а не создают дублей в партиции
+        delivery.timeout.ms: 10000
+        request.timeout.ms: 5000
+    consumer:
+      auto-offset-reset: earliest
+      properties:
+        isolation.level: read_committed
+    listener:
+      missing-topics-fatal: false
   mvc:
     problemdetails:
       enabled: true
@@ -54,6 +68,16 @@ management:
       # гистограмма времени ответа для перцентилей в Grafana
       percentiles-histogram:
         http.server.requests: true
+
+app:
+  kafka:
+    loans-topic: library.loans
+  outbox:
+    poll-interval: 500ms
+    batch-size: 50
+  loans:
+    period: 14d
+    max-active-per-reader: 3
 
 springdoc:
   swagger-ui:

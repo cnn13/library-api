@@ -13,7 +13,7 @@
 
   <groupId>ru.lab15</groupId>
   <artifactId>library-api</artifactId>
-  <version>1.1.0</version>
+  <version>1.2.0</version>
   <name>library-api</name>
   <description>Library microservice (authors and books) with REST API and PostgreSQL</description>
 
@@ -72,6 +72,11 @@
       <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
       <version>${springdoc.version}</version>
     </dependency>
+    <!-- события выдачи книг (transactional outbox → Kafka → consumer статистики) -->
+    <dependency>
+      <groupId>org.springframework.kafka</groupId>
+      <artifactId>spring-kafka</artifactId>
+    </dependency>
 
     <dependency>
       <groupId>org.springframework.boot</groupId>
@@ -92,6 +97,17 @@
     <dependency>
       <groupId>org.testcontainers</groupId>
       <artifactId>postgresql</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.testcontainers</groupId>
+      <artifactId>kafka</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <!-- ожидание асинхронного результата (consumer) без Thread.sleep -->
+    <dependency>
+      <groupId>org.awaitility</groupId>
+      <artifactId>awaitility</artifactId>
       <scope>test</scope>
     </dependency>
   </dependencies>

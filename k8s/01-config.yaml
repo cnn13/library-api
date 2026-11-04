@@ -9,4 +9,5 @@ data:
   DB_NAME: library
   DB_USER: library
   DB_URL: jdbc:postgresql://library-db:5432/library
+  KAFKA_BOOTSTRAP_SERVERS: library-kafka:9092
   JAVA_OPTS: "-XX:MaxRAMPercentage=75 -XX:+ExitOnOutOfMemoryError"

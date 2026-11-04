@@ -108,7 +108,7 @@ curl -s -X POST localhost:8080/api/v1/books -H 'Content-Type: application/json' 
 
 ```bash
 minikube start
-docker build -t library-api:1.1.0 . && minikube image load library-api:1.1.0
+docker build -t library-api:1.2.0 . && minikube image load library-api:1.2.0
 kubectl apply -f k8s/00-namespace.yaml
 kubectl -n library create secret generic library-db --from-literal=password=<пароль>
 kubectl apply -f k8s/01-config.yaml -f k8s/02-postgres.yaml -f k8s/03-api.yaml

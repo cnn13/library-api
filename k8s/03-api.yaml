@@ -23,7 +23,7 @@ spec:
     spec:
       containers:
         - name: api
-          image: library-api:1.1.0
+          image: library-api:1.2.0
           imagePullPolicy: IfNotPresent   # образ загружен в minikube локально
           ports:
             - name: http

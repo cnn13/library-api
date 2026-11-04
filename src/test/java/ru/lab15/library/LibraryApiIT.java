@@ -25,7 +25,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
  * транзакции, сериализацию ответов и формат ошибок целиком.
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-@Import(PostgresContainer.class)
+@Import(TestInfra.class)
 class LibraryApiIT {
 
     private static final ParameterizedTypeReference<Map<String, Object>> MAP = new ParameterizedTypeReference<>() {
